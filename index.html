@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Intelligence Agent</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --fucsia: #E8185A;
+    --lima: #C8E832;
+    --negro: #111111;
+    --blanco: #FFFFFF;
+    --gris: #F0F0F0;
+    --gris-mid: #888888;
+    --gris-dark: #222222;
+    --border: #333333;
+  }
+
+  body {
+    background: var(--negro);
+    color: var(--blanco);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    border-bottom: 2px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--negro);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-logo {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--blanco);
+  }
+
+  .header-logo span { color: var(--fucsia); }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gris-mid);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--lima);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── LAYOUT ── */
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    border-right: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+
+  .sidebar-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gris-mid);
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  /* Brand list */
+  .brand-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .brand-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+
+  .brand-item:hover { border-color: var(--border); background: var(--gris-dark); }
+  .brand-item.active { border-color: var(--fucsia); background: rgba(232,24,90,0.08); }
+
+  .brand-info { display: flex; align-items: center; gap: 10px; }
+
+  .brand-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .brand-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blanco);
+  }
+
+  .brand-sector {
+    font-size: 10px;
+    color: var(--gris-mid);
+    margin-top: 1px;
+  }
+
+  .brand-remove {
+    background: none;
+    border: none;
+    color: var(--border);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+
+  .brand-remove:hover { color: var(--fucsia); }
+
+  /* Add brand form */
+  .add-brand-form { display: flex; flex-direction: column; gap: 8px; }
+
+  .form-input {
+    background: var(--gris-dark);
+    border: 1px solid var(--border);
+    color: var(--blanco);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus { border-color: var(--fucsia); }
+  .form-input::placeholder { color: var(--gris-mid); }
+
+  .btn-add {
+    background: var(--fucsia);
+    color: var(--blanco);
+    border: none;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+  }
+
+  .btn-add:hover { background: #c0144d; }
+  .btn-add:disabled { background: var(--border); cursor: not-allowed; }
+
+  /* Schedule */
+  .schedule-options { display: flex; flex-direction: column; gap: 6px; }
+
+  .schedule-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--gris-mid);
+  }
+
+  .schedule-option.selected {
+    border-color: var(--lima);
+    color: var(--lima);
+  }
+
+  .schedule-option input { display: none; }
+
+  /* Run button */
+  .btn-run {
+    margin: 20px 24px;
+    background: var(--lima);
+    color: var(--negro);
+    border: none;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-run:hover { background: #b5d22b; }
+  .btn-run:disabled { background: var(--border); color: var(--gris-mid); cursor: not-allowed; }
+
+  .btn-run .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--negro);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .btn-run.loading .spinner { display: block; }
+  .btn-run.loading .run-text { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── MAIN ── */
+  .main { display: flex; flex-direction: column; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    background: var(--negro);
+    position: sticky;
+    top: 56px;
+    z-index: 50;
+  }
+
+  .tab {
+    padding: 16px 28px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gris-mid);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+  }
+
+  .tab:hover { color: var(--blanco); }
+  .tab.active { color: var(--fucsia); border-bottom-color: var(--fucsia); }
+
+  /* Content panels */
+  .panel { display: none; padding: 32px; }
+  .panel.active { display: block; }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .empty-icon { font-size: 48px; opacity: 0.2; }
+
+  .empty-title {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: var(--blanco);
+  }
+
+  .empty-desc { font-size: 13px; color: var(--gris-mid); line-height: 1.7; max-width: 320px; }
+
+  /* Report */
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .report-title {
+    font-size: 28px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    color: var(--blanco);
+    line-height: 1;
+  }
+
+  .report-title span { color: var(--fucsia); }
+
+  .report-meta {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gris-mid);
+    margin-top: 8px;
+  }
+
+  .btn-export {
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--gris-mid);
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-export:hover { border-color: var(--lima); color: var(--lima); }
+
+  /* Brand sections in report */
+  .brand-section { margin-bottom: 40px; }
+
+  .brand-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand-section-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .brand-section-name {
+    font-size: 16px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-section-sector {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gris-mid);
+    margin-left: auto;
+  }
+
+  /* Insight cards */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-bottom: 16px;
+  }
+
+  .insight-card {
+    background: var(--gris-dark);
+    padding: 20px;
+  }
+
+  .insight-type {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .insight-type .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .insight-headline {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--blanco);
+    margin-bottom: 8px;
+  }
+
+  .insight-body {
+    font-size: 12px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: #999;
+  }
+
+  .insight-source {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--border);
+    margin-top: 12px;
+  }
+
+  /* Trend pills */
+  .trends-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .trend-pill {
+    padding: 5px 12px;
+    background: rgba(200,232,50,0.08);
+    border: 1px solid rgba(200,232,50,0.25);
+    color: var(--lima);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Summary box */
+  .summary-box {
+    background: rgba(232,24,90,0.07);
+    border-left: 3px solid var(--fucsia);
+    padding: 16px 20px;
+    margin-top: 12px;
+  }
+
+  .summary-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fucsia);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .summary-text {
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 1.75;
+    color: #ccc;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+    height: 14px;
+    margin-bottom: 8px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* History tab */
+  .history-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--gris-dark);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .history-item:hover { border-color: var(--border); }
+
+  .history-date {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gris-mid);
+  }
+
+  .history-brands {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blanco);
+    margin-top: 4px;
+  }
+
+  .history-badge {
+    background: rgba(232,24,90,0.15);
+    color: var(--fucsia);
+    border: 1px solid rgba(232,24,90,0.3);
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--negro); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">Brand<span>Intel</span> Agent</div>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    Agente activo
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Brand list -->
+    <div class="sidebar-section">
+      <span class="sidebar-label">Marcas monitoreadas</span>
+      <div class="brand-list" id="brandList"></div>
+    </div>
+
+    <!-- Add brand -->
+    <div class="sidebar-section">
+      <span class="sidebar-label">Agregar marca</span>
+      <div class="add-brand-form">
+        <input type="text" class="form-input" id="brandName" placeholder="Nombre de la marca" />
+        <input type="text" class="form-input" id="brandSector" placeholder="Sector (ej: psicología, moda...)" />
+        <input type="text" class="form-input" id="brandKeywords" placeholder="Keywords (separadas por coma)" />
+        <button class="btn-add" onclick="addBrand()">+ Agregar marca</button>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="sidebar-section">
+      <span class="sidebar-label">Frecuencia de informe</span>
+      <div class="schedule-options">
+        <label class="schedule-option selected" onclick="selectSchedule(this, 'semanal')">
+          <input type="radio" name="schedule" value="semanal" checked> ✦ Semanal
+        </label>
+        <label class="schedule-option" onclick="selectSchedule(this, 'quincenal')">
+          <input type="radio" name="schedule" value="quincenal"> ✦ Quincenal
+        </label>
+        <label class="schedule-option" onclick="selectSchedule(this, 'mensual')">
+          <input type="radio" name="schedule" value="mensual"> ✦ Mensual
+        </label>
+      </div>
+    </div>
+
+    <!-- Run -->
+    <button class="btn-run" id="runBtn" onclick="runAgent()">
+      <div class="spinner"></div>
+      <span class="run-text">▶ Generar informe ahora</span>
+    </button>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('report', this)">Informe actual</button>
+      <button class="tab" onclick="switchTab('history', this)">Historial</button>
+      <button class="tab" onclick="switchTab('config', this)">Configuración</button>
+    </div>
+
+    <!-- REPORT PANEL -->
+    <div class="panel active" id="panel-report">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">◎</div>
+        <div class="empty-title">Sin informe aún</div>
+        <div class="empty-desc">Agregá al menos una marca y presioná "Generar informe" para que el agente investigue trends, noticias y redes sociales.</div>
+      </div>
+      <div id="reportContent" style="display:none;"></div>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div class="panel" id="panel-history">
+      <div class="history-list" id="historyList">
+        <div class="empty-state">
+          <div class="empty-icon">◎</div>
+          <div class="empty-title">Sin historial</div>
+          <div class="empty-desc">Los informes generados aparecerán acá.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG PANEL -->
+    <div class="panel" id="panel-config">
+      <h2 style="font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:-0.01em;margin-bottom:24px;">Configuración del agente</h2>
+      <div style="display:flex;flex-direction:column;gap:16px;max-width:500px;">
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--gris-mid);margin-bottom:8px;">Idioma del informe</label>
+          <select class="form-input" style="cursor:pointer;">
+            <option>Español</option>
+            <option>Inglés</option>
+            <option>Español + Inglés</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--gris-mid);margin-bottom:8px;">Profundidad del análisis</label>
+          <select class="form-input" style="cursor:pointer;">
+            <option>Resumen ejecutivo</option>
+            <option selected>Análisis estándar</option>
+            <option>Análisis profundo</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--gris-mid);margin-bottom:8px;">Fuentes a monitorear</label>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" checked> Noticias y prensa</label>
+            <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" checked> Redes sociales (Instagram, TikTok)</label>
+            <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" checked> Tendencias del sector</label>
+            <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;"><input type="checkbox" checked> Competencia</label>
+          </div>
+        </div>
+        <button class="btn-add" style="max-width:200px;">Guardar configuración</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── STATE ──
+const COLORS = ['#E8185A','#C8E832','#4FC3F7','#FFB74D','#CE93D8','#80CBC4','#F48FB1','#AED581'];
+let brands = [
+  { id: 1, name: 'Juliana Bereny', sector: 'Psicología', keywords: 'emigración, bienestar, identidad', color: '#E8185A' }
+];
+let reportHistory = [];
+let colorIndex = 1;
+let activeTab = 'report';
+
+// ── RENDER BRANDS ──
+function renderBrands() {
+  const list = document.getElementById('brandList');
+  if (brands.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--gris-mid);padding:8px 0;">Ninguna marca agregada aún.</div>';
+    return;
+  }
+  list.innerHTML = brands.map(b => `
+    <div class="brand-item" data-id="${b.id}">
+      <div class="brand-info">
+        <div class="brand-dot" style="background:${b.color}"></div>
+        <div>
+          <div class="brand-name">${b.name}</div>
+          <div class="brand-sector">${b.sector}</div>
+        </div>
+      </div>
+      <button class="brand-remove" onclick="removeBrand(${b.id})" title="Eliminar">×</button>
+    </div>
+  `).join('');
+}
+
+function addBrand() {
+  const name = document.getElementById('brandName').value.trim();
+  const sector = document.getElementById('brandSector').value.trim();
+  const keywords = document.getElementById('brandKeywords').value.trim();
+  if (!name) { document.getElementById('brandName').focus(); return; }
+  brands.push({
+    id: Date.now(),
+    name,
+    sector: sector || 'General',
+    keywords: keywords || name,
+    color: COLORS[colorIndex % COLORS.length]
+  });
+  colorIndex++;
+  document.getElementById('brandName').value = '';
+  document.getElementById('brandSector').value = '';
+  document.getElementById('brandKeywords').value = '';
+  renderBrands();
+}
+
+function removeBrand(id) {
+  brands = brands.filter(b => b.id !== id);
+  renderBrands();
+}
+
+// ── TABS ──
+function switchTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ── SCHEDULE ──
+function selectSchedule(el, val) {
+  document.querySelectorAll('.schedule-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── RUN AGENT ──
+async function runAgent() {
+  if (brands.length === 0) {
+    alert('Agregá al menos una marca primero.');
+    return;
+  }
+  const btn = document.getElementById('runBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  document.getElementById('emptyState').style.display = 'none';
+  const reportContent = document.getElementById('reportContent');
+  reportContent.style.display = 'block';
+  reportContent.innerHTML = buildLoadingSkeleton();
+
+  // Switch to report tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.tab').classList.add('active');
+  document.getElementById('panel-report').classList.add('active');
+
+  try {
+    const results = [];
+    for (const brand of brands) {
+      const data = await fetchBrandIntel(brand);
+      results.push({ brand, data });
+    }
+    renderReport(results);
+    addToHistory(results);
+  } catch(e) {
+    reportContent.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><div class="empty-title">Error al generar</div><div class="empty-desc">${e.message}</div></div>`;
+  }
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+}
+
+// ── FETCH BRAND INTEL via Claude API ──
+async function fetchBrandIntel(brand) {
+  const prompt = `Sos un agente de inteligencia de marca. Investigá y analizá la siguiente marca/persona y devolvé un informe estructurado en JSON.
+
+MARCA: ${brand.name}
+SECTOR: ${brand.sector}
+KEYWORDS: ${brand.keywords}
+
+Devolvé SOLO un JSON válido con esta estructura exacta (sin backticks, sin markdown):
+{
+  "summary": "Párrafo de 2-3 oraciones con el estado actual de la marca esta semana",
+  "news": [
+    {"headline": "...", "body": "...", "source": "..."},
+    {"headline": "...", "body": "...", "source": "..."}
+  ],
+  "social_trends": [
+    {"headline": "...", "body": "...", "source": "Instagram/TikTok"},
+    {"headline": "...", "body": "...", "source": "Instagram/TikTok"}
+  ],
+  "sector_trends": [
+    {"headline": "...", "body": "...", "source": "..."},
+    {"headline": "...", "body": "...", "source": "..."}
+  ],
+  "trending_topics": ["topic1", "topic2", "topic3", "topic4", "topic5"],
+  "opportunity": "Una oportunidad concreta de contenido o acción que la marca debería aprovechar esta semana"
+}`;
+
+  const response = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  const data = await response.json();
+  const text = data.content
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join('');
+
+  // parse JSON
+  const clean = text.replace(/```json|```/g, '').trim();
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  return JSON.parse(clean.slice(start, end + 1));
+}
+
+// ── RENDER REPORT ──
+function renderReport(results) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('es-AR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const weeklabel = `Semana del ${now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})}`;
+
+  let html = `
+    <div class="report-header">
+      <div>
+        <div class="report-title">Informe <span>Semanal</span></div>
+        <div class="report-meta">${dateStr} · ${results.length} marca${results.length>1?'s':''} analizadas</div>
+      </div>
+      <button class="btn-export" onclick="exportReport()">↓ Exportar</button>
+    </div>
+  `;
+
+  for (const { brand, data } of results) {
+    html += `
+      <div class="brand-section">
+        <div class="brand-section-header">
+          <div class="brand-section-dot" style="background:${brand.color}"></div>
+          <div class="brand-section-name" style="color:${brand.color}">${brand.name}</div>
+          <div class="brand-section-sector">${brand.sector}</div>
+        </div>
+
+        <div class="summary-box" style="border-left-color:${brand.color}; background:${brand.color}18; margin-bottom:16px;">
+          <span class="summary-label" style="color:${brand.color}">↳ Resumen ejecutivo</span>
+          <div class="summary-text">${data.summary}</div>
+        </div>
+
+        <div class="insights-grid">
+          ${(data.news||[]).slice(0,1).map(n=>`
+          <div class="insight-card">
+            <div class="insight-type" style="color:#4FC3F7"><div class="dot" style="background:#4FC3F7"></div>Noticias & Prensa</div>
+            <div class="insight-headline">${n.headline}</div>
+            <div class="insight-body">${n.body}</div>
+            <div class="insight-source">Fuente: ${n.source}</div>
+          </div>`).join('')}
+
+          ${(data.social_trends||[]).slice(0,1).map(n=>`
+          <div class="insight-card">
+            <div class="insight-type" style="color:#FFB74D"><div class="dot" style="background:#FFB74D"></div>Redes Sociales</div>
+            <div class="insight-headline">${n.headline}</div>
+            <div class="insight-body">${n.body}</div>
+            <div class="insight-source">Fuente: ${n.source}</div>
+          </div>`).join('')}
+
+          ${(data.sector_trends||[]).slice(0,1).map(n=>`
+          <div class="insight-card">
+            <div class="insight-type" style="color:var(--lima)"><div class="dot" style="background:var(--lima)"></div>Tendencias del sector</div>
+            <div class="insight-headline">${n.headline}</div>
+            <div class="insight-body">${n.body}</div>
+            <div class="insight-source">Fuente: ${n.source}</div>
+          </div>`).join('')}
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--gris-mid);margin-bottom:8px;">Topics en tendencia</div>
+          <div class="trends-row">
+            ${(data.trending_topics||[]).map(t=>`<span class="trend-pill">${t}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="summary-box" style="border-left-color:var(--lima); background:rgba(200,232,50,0.06); margin-top:16px;">
+          <span class="summary-label" style="color:var(--lima)">↳ Oportunidad de la semana</span>
+          <div class="summary-text">${data.opportunity}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('reportContent').innerHTML = html;
+}
+
+// ── LOADING SKELETON ──
+function buildLoadingSkeleton() {
+  return `
+    <div style="animation: fadeIn 0.3s ease">
+      <div style="margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border);">
+        <div class="skeleton" style="width:200px;height:28px;margin-bottom:10px;"></div>
+        <div class="skeleton" style="width:300px;height:12px;"></div>
+      </div>
+      ${brands.map(b=>`
+      <div style="margin-bottom:40px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+          <div style="width:10px;height:10px;border-radius:50%;background:${b.color};flex-shrink:0;"></div>
+          <div class="skeleton" style="width:150px;height:16px;"></div>
+        </div>
+        <div class="skeleton" style="height:60px;margin-bottom:16px;"></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:16px;">
+          <div class="skeleton" style="height:140px;"></div>
+          <div class="skeleton" style="height:140px;"></div>
+          <div class="skeleton" style="height:140px;"></div>
+        </div>
+        <div class="skeleton" style="width:80%;height:12px;margin-bottom:6px;"></div>
+        <div class="skeleton" style="width:60%;height:12px;"></div>
+      </div>`).join('')}
+    </div>
+  `;
+}
+
+// ── HISTORY ──
+function addToHistory(results) {
+  const now = new Date();
+  reportHistory.unshift({
+    date: now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' }),
+    time: now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' }),
+    brands: results.map(r => r.brand.name).join(', '),
+    count: results.length
+  });
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (reportHistory.length === 0) return;
+  list.innerHTML = reportHistory.map((h, i) => `
+    <div class="history-item" onclick="switchTab('report', document.querySelectorAll('.tab')[0])">
+      <div>
+        <div class="history-date">${h.date} · ${h.time}</div>
+        <div class="history-brands">${h.brands}</div>
+      </div>
+      <div class="history-badge">${h.count} marca${h.count>1?'s':''}</div>
+    </div>
+  `).join('');
+}
+
+// ── EXPORT ──
+function exportReport() {
+  const content = document.getElementById('reportContent').innerText;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `informe_marcas_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+// ── ENTER KEY ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderBrands();
+  document.getElementById('brandKeywords').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addBrand();
+  });
+});
+</script>
+</body>
+</html>
